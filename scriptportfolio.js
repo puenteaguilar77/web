@@ -44,22 +44,26 @@ const mobileOverlay = document.querySelector('.mobile-overlay');
 const skillBars = document.querySelectorAll('.skill-progress');
 const navLinksItems = document.querySelectorAll('.nav-links a');
 const themeToggle = document.getElementById('themeToggle');
+const html = document.documentElement;
+const body = document.body;
 
-// Menú móvil - FUNCIONA CORRECTAMENTE
+// Menú móvil
+let scrollPosition = 0;
 function toggleMobileMenu() {
     const isOpening = !navLinksContainer.classList.contains('active');
     
-    navLinksContainer.classList.toggle('active');
-    mobileOverlay.classList.toggle('active');
-    mobileMenu.classList.toggle('active');
-    
     if (isOpening) {
-        document.body.classList.add('menu-open');
-        document.body.style.overflow = 'hidden';
-        document.body.style.position = 'fixed';
-        document.body.style.width = '100%';
-        document.body.style.height = '100%';
+        scrollPosition = window.pageYOffset;
+        navLinksContainer.classList.add('active');
+        mobileOverlay.classList.add('active');
+        mobileMenu.classList.add('active');
+        body.classList.add('menu-open');
+        
+        body.style.top = `-${scrollPosition}px`;
+        body.style.position = 'fixed';
+        body.style.width = '100%';
     } else {
+        // Cerrar menú
         closeMobileMenu();
     }
 }
@@ -71,10 +75,10 @@ function closeMobileMenu() {
     document.body.classList.remove('menu-open');
     
     // Restaurar scroll del body
-    document.body.style.overflow = '';
-    document.body.style.position = '';
-    document.body.style.width = '';
-    document.body.style.height = '';
+    body.style.position = '';
+    body.style.top = '';
+    body.style.width = '';
+    window.scrollTo(0, scrollPosition);
 }
 
 // Event listeners para menú móvil
@@ -93,6 +97,14 @@ navLinksItems.forEach(link => {
     link.addEventListener('click', (e) => {
         e.stopPropagation();
         closeMobileMenu();
+        
+        setTimeout(() => {
+            const targetId = link.getAttribute('href').substring(1);
+            const targetSection = document.getElementById(targetId);
+            if (targetSection) {
+                targetSection.scrollIntoView({ behavior: 'smooth' });
+            }
+        }, 300);
     });
 });
 
@@ -142,10 +154,8 @@ window.addEventListener('scroll', () => {
         header.classList.remove('scrolled');
     }
 
-    // Debounce para mejor performance
     clearTimeout(scrollTimeout);
     scrollTimeout = setTimeout(() => {
-        // Actualizar navegación activa
         const sections = document.querySelectorAll('section');
         let current = '';
         
@@ -250,9 +260,6 @@ contactForm.addEventListener('submit', (e) => {
 
 // ========== FUNCIONALIDAD DE TEMA CLARO/OSCURO ==========
 
-// Elementos del tema
-const body = document.body;
-
 // Verificar preferencia del usuario
 function getThemePreference() {
     const savedTheme = localStorage.getItem('theme');
@@ -320,7 +327,19 @@ window.addEventListener('load', () => {
     }
 });
 
-// Prevenir zoom no deseado en iOS
 document.addEventListener('touchmove', function(e) {
-    e.preventDefault();
+    // Solo prevenir el comportamiento por defecto en elementos específicos
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        return;
+    }
 }, { passive: false });
+
+// Manejar el evento de orientación change en móvil
+window.addEventListener('orientationchange', function() {
+    // Pequeño delay para que la orientación se estabilice
+    setTimeout(() => {
+        if (navLinksContainer.classList.contains('active')) {
+            closeMobileMenu();
+        }
+    }, 300);
+});
