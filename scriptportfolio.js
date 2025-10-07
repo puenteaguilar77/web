@@ -42,30 +42,67 @@ const mobileMenu = document.querySelector('.mobile-menu');
 const navLinksContainer = document.querySelector('.nav-links');
 const mobileOverlay = document.querySelector('.mobile-overlay');
 const skillBars = document.querySelectorAll('.skill-progress');
+const navLinksItems = document.querySelectorAll('.nav-links a');
+const themeToggle = document.getElementById('themeToggle');
 
 // Menú móvil - FUNCIONA CORRECTAMENTE
 function toggleMobileMenu() {
+    const isOpening = !navLinksContainer.classList.contains('active');
+    
     navLinksContainer.classList.toggle('active');
     mobileOverlay.classList.toggle('active');
     mobileMenu.classList.toggle('active');
-    document.body.style.overflow = navLinksContainer.classList.contains('active') ? 'hidden' : 'auto';
+    
+    if (isOpening) {
+        document.body.classList.add('menu-open');
+        document.body.style.overflow = 'hidden';
+        document.body.style.position = 'fixed';
+        document.body.style.width = '100%';
+        document.body.style.height = '100%';
+    } else {
+        closeMobileMenu();
+    }
 }
 
 function closeMobileMenu() {
     navLinksContainer.classList.remove('active');
     mobileOverlay.classList.remove('active');
     mobileMenu.classList.remove('active');
-    document.body.style.overflow = 'auto';
+    document.body.classList.remove('menu-open');
+    
+    // Restaurar scroll del body
+    document.body.style.overflow = '';
+    document.body.style.position = '';
+    document.body.style.width = '';
+    document.body.style.height = '';
 }
 
 // Event listeners para menú móvil
-mobileMenu.addEventListener('click', toggleMobileMenu);
-mobileOverlay.addEventListener('click', closeMobileMenu);
+mobileMenu.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleMobileMenu();
+});
+mobileOverlay.addEventListener('click', (e) => {
+    e.stopPropagation();
+    closeMobileMenu();
+});
 
 // Cerrar menú al hacer clic en enlaces
-navLinks.forEach(link => {
-    link.addEventListener('click', closeMobileMenu);
+
+navLinksItems.forEach(link => {
+    link.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeMobileMenu();
+    });
 });
+
+// Cerrar menú al hacer clic en el botón de tema (si está en el menú móvil)
+if (themeToggle) {
+    themeToggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeMobileMenu();
+    });
+}
 
 // Cerrar menú con tecla ESC
 document.addEventListener('keydown', (e) => {
@@ -74,14 +111,29 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// Cerrar menú al redimensionar
+// Cerrar menú al redimensionar (si se cambia a desktop)
 window.addEventListener('resize', () => {
-    if (window.innerWidth > 768) {
+    if (window.innerWidth > 768 && navLinksContainer.classList.contains('active')) {
         closeMobileMenu();
     }
 });
 
+// Cerrar menú al hacer clic fuera del menú (en el documento)
+document.addEventListener('click', (e) => {
+    if (navLinksContainer.classList.contains('active') && 
+        !navLinksContainer.contains(e.target) && 
+        !mobileMenu.contains(e.target)) {
+        closeMobileMenu();
+    }
+});
+
+// Prevenir que los clics dentro del menú se propaguen al documento
+navLinksContainer.addEventListener('click', (e) => {
+    e.stopPropagation();
+});
+
 // Scroll para cambiar navegación activa
+let scrollTimeout;
 window.addEventListener('scroll', () => {
     // Header con efecto al hacer scroll
     if (window.scrollY > 100) {
@@ -90,24 +142,28 @@ window.addEventListener('scroll', () => {
         header.classList.remove('scrolled');
     }
 
-    // Actualizar navegación activa
-    const sections = document.querySelectorAll('section');
-    let current = '';
-    
-    sections.forEach(section => {
-        const sectionTop = section.offsetTop - 100;
-        const sectionHeight = section.clientHeight;
-        if (window.scrollY >= sectionTop && window.scrollY < sectionTop + sectionHeight) {
-            current = section.getAttribute('id');
-        }
-    });
+    // Debounce para mejor performance
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(() => {
+        // Actualizar navegación activa
+        const sections = document.querySelectorAll('section');
+        let current = '';
+        
+        sections.forEach(section => {
+            const sectionTop = section.offsetTop - 100;
+            const sectionHeight = section.clientHeight;
+            if (window.scrollY >= sectionTop && window.scrollY < sectionTop + sectionHeight) {
+                current = section.getAttribute('id');
+            }
+        });
 
-    navLinks.forEach(link => {
-        link.classList.remove('active');
-        if (link.getAttribute('href').substring(1) === current) {
-            link.classList.add('active');
-        }
-    });
+        navLinksItems.forEach(link => {
+            link.classList.remove('active');
+            if (link.getAttribute('href').substring(1) === current) {
+                link.classList.add('active');
+            }
+        });
+    }, 10);
 });
 
 // Abrir modal de proyectos
@@ -195,7 +251,6 @@ contactForm.addEventListener('submit', (e) => {
 // ========== FUNCIONALIDAD DE TEMA CLARO/OSCURO ==========
 
 // Elementos del tema
-const themeToggle = document.getElementById('themeToggle');
 const body = document.body;
 
 // Verificar preferencia del usuario
@@ -256,5 +311,16 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e)
 // Inicializar
 window.addEventListener('load', () => {
     document.body.style.opacity = 1;
-    initTheme(); // Inicializar tema
+    initTheme();
+    
+    // Asegurar que el body tenga el ancho correcto en móvil
+    if (window.innerWidth <= 768) {
+        document.body.style.width = '100%';
+        document.body.style.overflowX = 'hidden';
+    }
 });
+
+// Prevenir zoom no deseado en iOS
+document.addEventListener('touchmove', function(e) {
+    e.preventDefault();
+}, { passive: false });
